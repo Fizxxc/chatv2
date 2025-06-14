@@ -15,7 +15,7 @@ import {
   query,
   get
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
-import { app } from './auth.js';
+import { app, auth, database } from './auth.js';
 
 // Initialize Firebase services
 const auth = getAuth(app);
