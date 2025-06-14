@@ -20,13 +20,13 @@ const database = firebase.database();
 auth.onAuthStateChanged((user) => {
     if (user) {
         // User is logged in
-        if (window.location.pathname === '/index.html' || window.location.pathname === '/register.html') {
-            window.location.href = 'chat.html';
+        if (window.location.pathname === '/' || window.location.pathname === '/register') {
+            window.location.href = '/chat';
         }
     } else {
         // User is not logged in
-        if (window.location.pathname === '/chat.html') {
-            window.location.href = 'index.html';
+        if (window.location.pathname === '/chat') {
+            window.location.href = '/';
         }
     }
 });
@@ -48,7 +48,7 @@ document.getElementById('loginForm')?.addEventListener('submit', (e) => {
                 icon: 'success',
                 confirmButtonColor: '#7367f0'
             }).then(() => {
-                window.location.href = 'chat.html';
+                window.location.href = '/chat';
             });
         })
         .catch((error) => {
@@ -118,7 +118,7 @@ document.getElementById('registerForm')?.addEventListener('submit', (e) => {
 // Logout Function
 function logout() {
     auth.signOut().then(() => {
-        window.location.href = 'index.html';
+        window.location.href = '/';
     }).catch((error) => {
         console.error('Logout error:', error);
     });

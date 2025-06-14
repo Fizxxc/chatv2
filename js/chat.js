@@ -25,7 +25,7 @@ function initChat() {
     currentUser = auth.currentUser;
 
     if (!currentUser) {
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 
