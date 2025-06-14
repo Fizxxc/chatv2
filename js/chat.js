@@ -1,3 +1,26 @@
+// Import Firebase modules
+import { 
+  getAuth, 
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { 
+  getDatabase, 
+  ref, 
+  push, 
+  onValue, 
+  orderByChild, 
+  update,
+  serverTimestamp,
+  query,
+  get
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+import { app } from './auth.js';
+
+// Initialize Firebase services
+const auth = getAuth(app);
+const database = getDatabase(app);
+
 // DOM Elements
 const chatElements = {
   list: document.getElementById('chatList'),
@@ -27,20 +50,24 @@ const chatState = {
 
 // Initialize Chat
 function initChat() {
-  chatState.currentUser = firebase.auth().currentUser;
+  onAuthStateChanged(auth, (user) => {
+    chatState.currentUser = user;
+    
+    if (!user) {
+      window.location.href = '/index.html';
+      return;
+    }
 
-  if (!chatState.currentUser) {
-    window.location.href = '/index.html';
-    return;
-  }
-
-  loadUserProfile();
-  loadChats();
-  setupEventListeners();
+    loadUserProfile();
+    loadChats();
+    setupEventListeners();
+  });
 }
 
 function loadUserProfile() {
-  firebase.database().ref('users/' + chatState.currentUser.uid).once('value').then((snapshot) => {
+  const userRef = ref(database, 'users/' + chatState.currentUser.uid);
+  
+  get(userRef).then((snapshot) => {
     const userData = snapshot.val();
     if (userData) {
       chatElements.usernameDisplay.textContent = userData.username;
@@ -51,14 +78,14 @@ function loadUserProfile() {
   });
 }
 
-function generateAvatarUrl(username) {
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=7367f0&color=fff&rounded=true&size=128`;
+function generateAvatarUrl(username, size = 128) {
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=7367f0&color=fff&rounded=true&size=${size}`;
 }
 
 function loadChats() {
-  const userChatsRef = firebase.database().ref('userChats/' + chatState.currentUser.uid);
+  const userChatsRef = ref(database, 'userChats/' + chatState.currentUser.uid);
   
-  userChatsRef.on('value', (snapshot) => {
+  onValue(userChatsRef, (snapshot) => {
     chatState.chats = [];
     chatElements.list.innerHTML = '';
 
@@ -81,7 +108,9 @@ function loadChats() {
 }
 
 function loadChatPartnerInfo(chatId, partnerId, chatData) {
-  firebase.database().ref('users/' + partnerId).once('value').then((snapshot) => {
+  const partnerRef = ref(database, 'users/' + partnerId);
+  
+  get(partnerRef).then((snapshot) => {
     const userData = snapshot.val();
     if (userData) {
       addChatToList(chatId, partnerId, userData.username, chatData.lastMessage || 'No messages yet', chatData.updatedAt);
@@ -126,9 +155,12 @@ function openChat(chatId, partnerId, partnerUsername) {
 function loadChatMessages(chatId, partnerUsername) {
   chatElements.messages.innerHTML = '';
   
-  const messagesRef = firebase.database().ref('chats/' + chatId + '/messages').orderByChild('timestamp');
+  const messagesRef = query(
+    ref(database, 'chats/' + chatId + '/messages'),
+    orderByChild('timestamp')
+  );
   
-  messagesRef.on('value', (snapshot) => {
+  onValue(messagesRef, (snapshot) => {
     if (!snapshot.exists()) {
       showEmptyChatState(partnerUsername);
       return;
@@ -174,18 +206,19 @@ function sendMessage() {
   const message = {
     text: messageText,
     senderId: chatState.currentUser.uid,
-    timestamp: firebase.database.ServerValue.TIMESTAMP
+    timestamp: serverTimestamp()
   };
 
-  // Save message
-  firebase.database().ref('chats/' + chatState.currentChat + '/messages').push(message)
+  const messagesRef = ref(database, 'chats/' + chatState.currentChat + '/messages');
+  
+  push(messagesRef, message)
     .then(() => {
       updateLastMessage(messageText);
       chatElements.messageInput.value = '';
     })
     .catch(error => {
       console.error('Message send error:', error);
-      Swal.fire('Error', 'Failed to send message', 'error');
+      showErrorAlert('Failed to send message');
     });
 }
 
@@ -197,14 +230,14 @@ function updateLastMessage(messageText) {
   if (!otherUserId) return;
 
   const updates = {};
-  const timestamp = firebase.database.ServerValue.TIMESTAMP;
+  const timestamp = serverTimestamp();
   
   updates[`userChats/${chatState.currentUser.uid}/${chatState.currentChat}/lastMessage`] = messageText;
   updates[`userChats/${chatState.currentUser.uid}/${chatState.currentChat}/updatedAt`] = timestamp;
   updates[`userChats/${otherUserId}/${chatState.currentChat}/lastMessage`] = messageText;
   updates[`userChats/${otherUserId}/${chatState.currentChat}/updatedAt`] = timestamp;
 
-  firebase.database().ref().update(updates);
+  update(ref(database), updates);
 }
 
 function scrollToBottom() {
@@ -228,13 +261,15 @@ function searchUsers() {
   const searchTerm = chatElements.searchInput.value.trim().toLowerCase();
   
   if (!searchTerm) {
-    Swal.fire('Info', 'Please enter a search term', 'info');
+    showInfoAlert('Please enter a search term');
     return;
   }
   
   chatElements.searchResults.innerHTML = '<p class="searching">Searching users...</p>';
   
-  firebase.database().ref('users').once('value').then((snapshot) => {
+  const usersRef = ref(database, 'users');
+  
+  get(usersRef).then((snapshot) => {
     chatElements.searchResults.innerHTML = '';
     let foundUsers = 0;
     
@@ -291,7 +326,9 @@ function startNewChat(partnerId) {
 }
 
 function openExistingChat(chatId, partnerId) {
-  firebase.database().ref('users/' + partnerId).once('value').then((snapshot) => {
+  const partnerRef = ref(database, 'users/' + partnerId);
+  
+  get(partnerRef).then((snapshot) => {
     const userData = snapshot.val();
     if (userData) {
       openChat(chatId, partnerId, userData.username);
@@ -301,7 +338,7 @@ function openExistingChat(chatId, partnerId) {
 }
 
 function createNewChat(partnerId) {
-  const newChatRef = firebase.database().ref('chats').push();
+  const newChatRef = push(ref(database, 'chats'));
   const chatId = newChatRef.key;
   
   const chatData = {
@@ -309,22 +346,22 @@ function createNewChat(partnerId) {
       [chatState.currentUser.uid]: true,
       [partnerId]: true
     },
-    createdAt: firebase.database.ServerValue.TIMESTAMP,
-    updatedAt: firebase.database.ServerValue.TIMESTAMP
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
   };
   
-  newChatRef.set(chatData)
+  set(newChatRef, chatData)
     .then(() => updateUserChats(chatId, partnerId))
     .then(() => loadPartnerInfo(partnerId))
     .catch(error => {
       console.error('Chat creation error:', error);
-      Swal.fire('Error', 'Failed to create chat', 'error');
+      showErrorAlert('Failed to create chat');
     });
 }
 
 function updateUserChats(chatId, partnerId) {
   const updates = {};
-  const timestamp = firebase.database.ServerValue.TIMESTAMP;
+  const timestamp = serverTimestamp();
   
   updates[`userChats/${chatState.currentUser.uid}/${chatId}`] = {
     users: {
@@ -342,16 +379,18 @@ function updateUserChats(chatId, partnerId) {
     updatedAt: timestamp
   };
   
-  return firebase.database().ref().update(updates);
+  return update(ref(database), updates);
 }
 
 function loadPartnerInfo(partnerId) {
-  return firebase.database().ref('users/' + partnerId).once('value').then((snapshot) => {
+  const partnerRef = ref(database, 'users/' + partnerId);
+  
+  return get(partnerRef).then((snapshot) => {
     const userData = snapshot.val();
     if (userData) {
       openChat(chatState.currentChat, partnerId, userData.username);
       hideAddFriendModal();
-      Swal.fire('Success', `Chat with ${userData.username} created!`, 'success');
+      showSuccessAlert(`Chat with ${userData.username} created!`);
     }
   });
 }
@@ -382,6 +421,34 @@ function setupEventListeners() {
   chatElements.searchBtn.addEventListener('click', searchUsers);
   chatElements.searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') searchUsers();
+  });
+}
+
+// Alert Helpers
+function showSuccessAlert(message) {
+  Swal.fire({
+    title: 'Success',
+    text: message,
+    icon: 'success',
+    confirmButtonColor: '#7367f0'
+  });
+}
+
+function showErrorAlert(message) {
+  Swal.fire({
+    title: 'Error',
+    text: message,
+    icon: 'error',
+    confirmButtonColor: '#7367f0'
+  });
+}
+
+function showInfoAlert(message) {
+  Swal.fire({
+    title: 'Info',
+    text: message,
+    icon: 'info',
+    confirmButtonColor: '#7367f0'
   });
 }
 
