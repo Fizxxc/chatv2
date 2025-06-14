@@ -10,32 +10,54 @@ const firebaseConfig = {
   measurementId: "G-Q8FP7FQQHV"
 };
 
-// Initialize Firebase
+// Initialize Firebase only once
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Auth State Management
+// Track authentication state
+let authInitialized = false;
+let currentUser = null;
+
+// Improved Auth State Management
 function handleAuthState() {
   auth.onAuthStateChanged((user) => {
-    const currentPath = window.location.pathname;
+    currentUser = user;
     
-    if (user) {
-      // User is logged in
-      if (currentPath === '/' || currentPath === '/register.html' || currentPath === '/index.html') {
-        setTimeout(() => {
-          window.location.href = '/chat.html';
-        }, 500);
-      }
-    } else {
-      // User is not logged in
-      if (currentPath === '/chat.html') {
-        window.location.href = '/index.html';
-      }
+    if (!authInitialized) {
+      authInitialized = true;
+      checkRedirect(user);
     }
   });
+}
+
+// Smart Redirect Logic
+function checkRedirect(user) {
+  const currentPath = window.location.pathname;
+  const authPages = ['/', '/index.html', '/register.html'];
+  const protectedPages = ['/chat.html'];
+  
+  // Don't redirect if we're already on the correct page
+  if (user && protectedPages.includes(currentPath)) return;
+  if (!user && authPages.includes(currentPath)) return;
+  
+  if (user) {
+    // User is logged in - redirect from auth pages to chat
+    if (authPages.some(page => currentPath.endsWith(page))) {
+      setTimeout(() => {
+        window.location.href = '/chat.html';
+      }, 300);
+    }
+  } else {
+    // User is not logged in - redirect from protected pages to login
+    if (protectedPages.some(page => currentPath.endsWith(page))) {
+      setTimeout(() => {
+        window.location.href = '/index.html';
+      }, 300);
+    }
+  }
 }
 
 // Enhanced Login Function
@@ -50,163 +72,113 @@ function setupLoginForm() {
     const password = document.getElementById('loginPassword').value;
     
     try {
+      // Show loading state
+      const loginBtn = loginForm.querySelector('button[type="submit"]');
+      const originalText = loginBtn.innerHTML;
+      loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+      loginBtn.disabled = true;
+      
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
-      const user = userCredential.user;
       
       await Swal.fire({
         title: 'Login Successful!',
         text: 'Redirecting to chat...',
         icon: 'success',
-        confirmButtonColor: '#7367f0',
         timer: 1500,
         showConfirmButton: false
       });
       
       window.location.href = '/chat.html';
     } catch (error) {
-      let errorMessage = 'Authentication failed. Please try again.';
+      // Reset button state
+      const loginBtn = loginForm.querySelector('button[type="submit"]');
+      loginBtn.innerHTML = originalText;
+      loginBtn.disabled = false;
       
-      switch (error.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'No user found with this email.';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Incorrect password.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email format.';
-          break;
-      }
-      
-      Swal.fire({
-        title: 'Login Failed',
-        text: errorMessage,
-        icon: 'error',
-        confirmButtonColor: '#7367f0'
-      });
+      handleAuthError(error, 'login');
     }
   });
 }
 
-// Enhanced Register Function
-function setupRegisterForm() {
-  const registerForm = document.getElementById('registerForm');
-  if (!registerForm) return;
-
-  registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const username = document.getElementById('registerUsername').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('registerConfirmPassword').value;
-
-    // Validation
-    if (password !== confirmPassword) {
-      Swal.fire({
-        title: 'Password Mismatch',
-        text: 'Passwords do not match.',
-        icon: 'error',
-        confirmButtonColor: '#7367f0'
-      });
-      return;
-    }
-
-    if (username.length < 3) {
-      Swal.fire({
-        title: 'Invalid Username',
-        text: 'Username must be at least 3 characters.',
-        icon: 'error',
-        confirmButtonColor: '#7367f0'
-      });
-      return;
-    }
-
-    try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-
-      // Save additional user data
-      await database.ref('users/' + user.uid).set({
-        username: username,
-        email: email,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        lastLogin: firebase.database.ServerValue.TIMESTAMP
-      });
-
-      await Swal.fire({
-        title: 'Registration Successful!',
-        text: 'Your account has been created.',
-        icon: 'success',
-        confirmButtonColor: '#7367f0',
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      window.location.href = '/chat.html';
-    } catch (error) {
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = 'Email already in use.';
-          break;
-        case 'auth/weak-password':
-          errorMessage = 'Password should be at least 6 characters.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'Invalid email format.';
-          break;
-      }
-
-      Swal.fire({
-        title: 'Registration Failed',
-        text: errorMessage,
-        icon: 'error',
-        confirmButtonColor: '#7367f0'
-      });
-    }
-  });
-}
-
-// Enhanced Logout Function
-function logout() {
+// Enhanced Error Handling
+function handleAuthError(error, action) {
+  let errorMessage = `${action === 'login' ? 'Login' : 'Registration'} failed. Please try again.`;
+  
+  const errorMap = {
+    'auth/user-not-found': 'No user found with this email.',
+    'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-email': 'Invalid email format.',
+    'auth/email-already-in-use': 'Email already in use.',
+    'auth/weak-password': 'Password should be at least 6 characters.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.'
+  };
+  
+  if (errorMap[error.code]) {
+    errorMessage = errorMap[error.code];
+  }
+  
   Swal.fire({
-    title: 'Are you sure?',
-    text: 'You will be logged out from the system.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#7367f0',
-    cancelButtonColor: '#82868b',
-    confirmButtonText: 'Yes, logout!'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      auth.signOut()
-        .then(() => {
-          window.location.href = '/index.html';
-        })
-        .catch((error) => {
-          console.error('Logout error:', error);
-          Swal.fire({
-            title: 'Logout Failed',
-            text: 'An error occurred during logout.',
-            icon: 'error',
-            confirmButtonColor: '#7367f0'
-          });
-        });
-    }
+    title: `${action === 'login' ? 'Login' : 'Registration'} Failed`,
+    text: errorMessage,
+    icon: 'error',
+    confirmButtonColor: '#7367f0'
   });
 }
 
 // Initialize all auth functionality
 function initAuth() {
-  handleAuthState();
-  setupLoginForm();
-  setupRegisterForm();
-  
-  // Expose logout function globally if needed
-  window.logout = logout;
+  // Add loading overlay
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.id = 'authLoadingOverlay';
+  loadingOverlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  `;
+  loadingOverlay.innerHTML = `
+    <div class="spinner" style="
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #7367f0;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    "></div>
+  `;
+  document.body.appendChild(loadingOverlay);
+
+  // Initialize auth with slight delay to ensure Firebase is ready
+  setTimeout(() => {
+    handleAuthState();
+    setupLoginForm();
+    setupRegisterForm();
+    
+    // Remove loading overlay after auth check
+    setTimeout(() => {
+      document.getElementById('authLoadingOverlay')?.remove();
+    }, 1000);
+    
+    // Expose logout function
+    window.logout = logout;
+  }, 300);
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', initAuth);
+
+// Add spin animation to head
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);

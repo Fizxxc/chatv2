@@ -568,8 +568,13 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes slideInUp {
@@ -577,6 +582,7 @@ body {
         transform: translateY(20px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -593,45 +599,64 @@ body {
     border-radius: 10px !important;
 }
 
-        /* Logout Button Styles */
-        .logout-btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background-color: #ea5455;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 12px 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(234, 84, 85, 0.3);
-            z-index: 100;
-            transition: all 0.3s ease;
-        }
-        
-        .logout-btn:hover {
-            background-color: #e42728;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(234, 84, 85, 0.4);
-        }
-        
-        .logout-btn i {
-            font-size: 16px;
-        }
-        
-        @media (max-width: 768px) {
-            .logout-btn {
-                bottom: 80px;
-                left: 50%;
-                transform: translateX(-50%);
-                padding: 10px 16px;
-                font-size: 14px;
-            }
-            
-            .logout-btn:hover {
-                transform: translateX(-50%) translateY(-2px);
-            }
-        }
+/* Logout Button Styles */
+.logout-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: #ea5455;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(234, 84, 85, 0.3);
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+    background-color: #e42728;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(234, 84, 85, 0.4);
+}
+
+.logout-btn i {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .logout-btn {
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .logout-btn:hover {
+        transform: translateX(-50%) translateY(-2px);
+    }
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #7367f0;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
