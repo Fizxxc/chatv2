@@ -37,12 +37,10 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/404.html"
+      "destination": "/404.html",
+      "statusCode": 404
     }
   ],
-  "errorPages": {
-    "404": "/404.html"
-  },
   "cleanUrls": true,
   "trailingSlash": false
 }
