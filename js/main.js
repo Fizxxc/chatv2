@@ -14,7 +14,49 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
+
+    // Inisialisasi overlay
+    initOverlay();
 });
+
+// Inisialisasi overlay
+function initOverlay() {
+    // Style untuk tooltip
+    const style = document.createElement('style');
+    style.textContent = `
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Tambahkan overlay untuk sidebar mobile
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.addEventListener('click', toggleSidebar);
+    document.body.appendChild(overlay);
+}
 
 // Toggle Mobile Sidebar
 function toggleSidebar() {
@@ -110,55 +152,30 @@ function isMobile() {
 
 // Logout Function
 function logout() {
-    auth.signOut().then(() => {
-        window.location.href = 'index.html';
-    }).catch((error) => {
-        console.error('Logout error:', error);
-        Swal.fire({
-            title: 'Logout Failed',
-            text: error.message,
-            icon: 'error',
-            confirmButtonColor: '#7367f0'
-        });
+    // Gunakan auth dari window atau impor dari auth.js
+    const auth = window.auth || firebase.auth();
+    
+    Swal.fire({
+        title: 'Are you sure?',
+        text: 'You will be logged out from the system.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#7367f0',
+        cancelButtonColor: '#82868b',
+        confirmButtonText: 'Yes, logout!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            }).catch((error) => {
+                console.error('Logout error:', error);
+                Swal.fire({
+                    title: 'Logout Failed',
+                    text: error.message,
+                    icon: 'error',
+                    confirmButtonColor: '#7367f0'
+                });
+            });
+        }
     });
 }
-
-// Add to main.js if not already present
-const auth = firebase.auth();
-const database = firebase.database();
-
-// Style untuk tooltip
-const style = document.createElement('style');
-style.textContent = `
-    .tooltip {
-        position: absolute;
-        background-color: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        z-index: 1000;
-        pointer-events: none;
-        transition: opacity 0.3s;
-    }
-    
-    .sidebar-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 99;
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-`;
-document.head.appendChild(style);
-
-// Tambahkan overlay untuk sidebar mobile
-const overlay = document.createElement('div');
-overlay.className = 'sidebar-overlay';
-overlay.addEventListener('click', toggleSidebar);
-document.body.appendChild(overlay);
