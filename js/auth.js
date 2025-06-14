@@ -1,14 +1,22 @@
-// Firebase configuration
-// Import Firebase modules
+// Import Firebase modules from CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-    from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-import { getDatabase, ref, set, onValue, serverTimestamp } 
-    from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { 
+  getDatabase, 
+  ref, 
+  set, 
+  update,
+  serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
 
 // Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCTra71Vq4b0nPZ8hdfgY_Sxxr-REk9-9E",
   authDomain: "https://topup-2c5db-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -19,69 +27,85 @@ const firebaseConfig = {
   measurementId: "G-QJY9J2Y6QZ"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const database = getDatabase(app);
-const analytics = getAnalytics(app);
-
-// Improved Auth State Management
-function handleAuthState() {
-    onAuthStateChanged(auth, (user) => {
-        console.log('Auth state changed:', user);
-        currentUser = user;
-        
-        if (!authInitialized) {
-            authInitialized = true;
-            checkRedirect(user);
-        }
-    });
+// Initialize Firebase services
+let app, auth, database, analytics;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  database = getDatabase(app);
+  
+  // Initialize Analytics only if measurementId exists
+  if (firebaseConfig.measurementId) {
+    analytics = getAnalytics(app);
+  }
+} catch (error) {
+  console.error('Firebase initialization failed:', error);
+  showFatalError('Failed to initialize application services. Please refresh the page.');
 }
+
 // Track authentication state
 let authInitialized = false;
 let currentUser = null;
-let loginBtnOriginalText = ''; // Store original button text globally
+let loginBtnOriginalText = '';
 
-// Improved Auth State Management
-function handleAuthState() {
-  auth.onAuthStateChanged((user) => {
-    console.log('Auth state changed:', user); // Debugging
+// Enhanced Auth State Management
+const handleAuthState = debounce(() => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    console.log('Auth state changed:', user);
     currentUser = user;
     
     if (!authInitialized) {
       authInitialized = true;
       checkRedirect(user);
+      updateUIForAuthState(user);
     }
   });
+
+  // Return unsubscribe function for cleanup
+  return unsubscribe;
+}, 300);
+
+// Update UI elements based on auth state
+function updateUIForAuthState(user) {
+  const logoutElements = document.querySelectorAll('.logout-btn');
+  const loginElements = document.querySelectorAll('.login-btn');
+  
+  if (user) {
+    logoutElements.forEach(el => el.style.display = 'block');
+    loginElements.forEach(el => el.style.display = 'none');
+    
+    // Update user profile info
+    const userEmailElements = document.querySelectorAll('.user-email');
+    userEmailElements.forEach(el => {
+      el.textContent = user.email;
+      el.title = user.email;
+    });
+  } else {
+    logoutElements.forEach(el => el.style.display = 'none');
+    loginElements.forEach(el => el.style.display = 'block');
+  }
 }
 
-// Smart Redirect Logic
+// Path management and redirection
 function checkRedirect(user) {
-  const currentPath = window.location.pathname;
-  console.log('Current path:', currentPath); // Debugging
+  const currentPath = normalizePath(window.location.pathname);
+  console.log('Current path:', currentPath);
   
   const authPages = ['/', '/index.html', '/register.html'];
   const protectedPages = ['/chat.html'];
   
-  // Don't redirect if we're already on the correct page
-  if (user && protectedPages.some(page => currentPath.endsWith(page))) return;
-  if (!user && authPages.some(page => currentPath.endsWith(page))) return;
+  if (user && protectedPages.includes(currentPath)) return;
+  if (!user && authPages.includes(currentPath)) return;
   
   if (user) {
-    // User is logged in - redirect from auth pages to chat
-    if (authPages.some(page => currentPath.endsWith(page))) {
-      console.log('Redirecting to chat...'); // Debugging
-      setTimeout(() => {
-        window.location.href = '/chat.html';
-      }, 500);
+    if (authPages.includes(currentPath)) {
+      console.log('Redirecting to chat...');
+      safeRedirect('/chat.html');
     }
   } else {
-    // User is not logged in - redirect from protected pages to login
-    if (protectedPages.some(page => currentPath.endsWith(page))) {
-      console.log('Redirecting to login...'); // Debugging
-      setTimeout(() => {
-        window.location.href = '/index.html';
-      }, 500);
+    if (protectedPages.includes(currentPath)) {
+      console.log('Redirecting to login...');
+      safeRedirect('/index.html');
     }
   }
 }
@@ -94,35 +118,33 @@ function setupLoginForm() {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
+    const email = sanitizeInput(loginForm.loginEmail.value);
+    const password = loginForm.loginPassword.value;
     const loginBtn = loginForm.querySelector('button[type="submit"]');
     
+    if (!email || !password) {
+      handleAuthError({ message: 'Please fill in all fields' }, 'login');
+      return;
+    }
+
     try {
-      // Show loading state
       loginBtnOriginalText = loginBtn.innerHTML;
       loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
       loginBtn.disabled = true;
       
-      const userCredential = await auth.signInWithEmailAndPassword(email, password);
-      console.log('Login success:', userCredential.user); // Debugging
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login success:', userCredential.user);
       
-      await Swal.fire({
-        title: 'Login Successful!',
-        text: 'Redirecting to chat...',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
+      // Update last login time
+      await update(ref(database, `users/${userCredential.user.uid}`), {
+        lastLogin: serverTimestamp()
       });
       
-      window.location.href = '/chat.html';
+      await showSuccessAlert('Login Successful!', 'Redirecting to chat...');
+      safeRedirect('/chat.html');
     } catch (error) {
-      console.error('Login error:', error); // Debugging
-      // Reset button state
-      if (loginBtn) {
-        loginBtn.innerHTML = loginBtnOriginalText;
-        loginBtn.disabled = false;
-      }
+      console.error('Login error:', error);
+      resetButtonState(loginBtn, loginBtnOriginalText);
       handleAuthError(error, 'login');
     }
   });
@@ -136,22 +158,25 @@ function setupRegisterForm() {
   registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const username = document.getElementById('registerUsername').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('registerConfirmPassword').value;
+    const username = sanitizeInput(registerForm.registerUsername.value.trim());
+    const email = sanitizeInput(registerForm.registerEmail.value.trim());
+    const password = registerForm.registerPassword.value;
+    const confirmPassword = registerForm.registerConfirmPassword.value;
     const registerBtn = registerForm.querySelector('button[type="submit"]');
     let registerBtnOriginalText = '';
 
     try {
-      // Show loading state
       if (registerBtn) {
         registerBtnOriginalText = registerBtn.innerHTML;
         registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
         registerBtn.disabled = true;
       }
 
-      // Validation
+      // Validate inputs
+      if (!username || !email || !password || !confirmPassword) {
+        throw new Error('Please fill in all fields');
+      }
+
       if (password !== confirmPassword) {
         throw new Error('Passwords do not match');
       }
@@ -160,95 +185,174 @@ function setupRegisterForm() {
         throw new Error('Username must be at least 3 characters');
       }
 
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-      currentUser = userCredential.user;
-      console.log('Registration success:', currentUser); // Debugging
+      if (!isValidEmail(email)) {
+        throw new Error('Please enter a valid email address');
+      }
 
-      // Save additional user data
-      await database.ref('users/' + currentUser.uid).set({
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      currentUser = userCredential.user;
+      console.log('Registration success:', currentUser);
+
+      // Save user data
+      await set(ref(database, `users/${currentUser.uid}`), {
         username: username,
         email: email,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        lastLogin: firebase.database.ServerValue.TIMESTAMP
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        role: 'user'
       });
 
-      await Swal.fire({
-        title: 'Registration Successful!',
-        text: 'Your account has been created.',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      window.location.href = '/chat.html';
+      await showSuccessAlert('Registration Successful!', 'Your account has been created.');
+      safeRedirect('/chat.html');
     } catch (error) {
-      console.error('Registration error:', error); // Debugging
-      // Reset button state
-      if (registerBtn) {
-        registerBtn.innerHTML = registerBtnOriginalText;
-        registerBtn.disabled = false;
-      }
+      console.error('Registration error:', error);
+      resetButtonState(registerBtn, registerBtnOriginalText);
       handleAuthError(error, 'register');
     }
   });
 }
 
-// Enhanced Error Handling
-function handleAuthError(error, action) {
-  let errorMessage = error.message || `${action === 'login' ? 'Login' : 'Registration'} failed. Please try again.`;
-  
-  const errorMap = {
-    'auth/user-not-found': 'No user found with this email.',
-    'auth/wrong-password': 'Incorrect password.',
-    'auth/invalid-email': 'Invalid email format.',
-    'auth/email-already-in-use': 'Email already in use.',
-    'auth/weak-password': 'Password should be at least 6 characters.',
-    'auth/too-many-requests': 'Too many attempts. Please try again later.'
+// Secure Logout Function
+function logout() {
+  showConfirmationDialog(
+    'Are you sure?', 
+    'You will be logged out from the system.',
+    'warning',
+    async () => {
+      try {
+        await signOut(auth);
+        currentUser = null;
+        safeRedirect('/index.html');
+      } catch (error) {
+        console.error('Logout error:', error);
+        showErrorAlert('Logout Failed', 'An error occurred during logout.');
+      }
+    }
+  );
+}
+
+// Utility Functions
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this, args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
   };
-  
-  if (error.code && errorMap[error.code]) {
-    errorMessage = errorMap[error.code];
+}
+
+function sanitizeInput(input) {
+  if (!input) return '';
+  return input.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}
+
+function normalizePath(path) {
+  return path.endsWith('/') ? path.slice(0, -1) : path;
+}
+
+function safeRedirect(path) {
+  try {
+    window.location.href = path;
+  } catch (error) {
+    console.error('Redirect failed:', error);
+    window.location.assign(path);
   }
-  
-  Swal.fire({
-    title: `${action === 'login' ? 'Login' : 'Registration'} Failed`,
-    text: errorMessage,
+}
+
+function resetButtonState(button, originalHTML) {
+  if (button) {
+    button.innerHTML = originalHTML;
+    button.disabled = false;
+  }
+}
+
+// UI Helper Functions
+function showSuccessAlert(title, text) {
+  return Swal.fire({
+    title,
+    text,
+    icon: 'success',
+    timer: 1500,
+    showConfirmButton: false
+  });
+}
+
+function showErrorAlert(title, text) {
+  return Swal.fire({
+    title,
+    text,
     icon: 'error',
     confirmButtonColor: '#7367f0'
   });
 }
 
-// Logout Function
-function logout() {
-  Swal.fire({
-    title: 'Are you sure?',
-    text: 'You will be logged out from the system.',
-    icon: 'warning',
+function showConfirmationDialog(title, text, icon, confirmCallback) {
+  return Swal.fire({
+    title,
+    text,
+    icon,
     showCancelButton: true,
     confirmButtonColor: '#7367f0',
     cancelButtonColor: '#82868b',
-    confirmButtonText: 'Yes, logout!'
+    confirmButtonText: 'Yes, proceed!'
   }).then((result) => {
     if (result.isConfirmed) {
-      auth.signOut()
-        .then(() => {
-          window.location.href = '/index.html';
-        })
-        .catch((error) => {
-          console.error('Logout error:', error);
-          Swal.fire({
-            title: 'Logout Failed',
-            text: 'An error occurred during logout.',
-            icon: 'error',
-            confirmButtonColor: '#7367f0'
-          });
-        });
+      confirmCallback();
     }
   });
 }
 
-// Initialize all auth functionality
+function showFatalError(message) {
+  const overlay = document.createElement('div');
+  overlay.id = 'fatalErrorOverlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  `;
+  overlay.innerHTML = `
+    <div style="color: #ff4d4f; font-size: 48px; margin-bottom: 20px;">⚠️</div>
+    <h2 style="color: #ff4d4f; margin-bottom: 15px;">Critical Error</h2>
+    <p style="margin-bottom: 25px; max-width: 500px;">${message}</p>
+    <button onclick="window.location.reload()" style="
+      background: #7367f0;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    ">Refresh Page</button>
+  `;
+  document.body.appendChild(overlay);
+}
+
+// Initialize the application
 function initAuth() {
+  if (!auth || !database) {
+    showFatalError('Authentication services failed to initialize.');
+    return;
+  }
+
   // Add loading overlay
   const loadingOverlay = document.createElement('div');
   loadingOverlay.id = 'authLoadingOverlay';
@@ -264,6 +368,7 @@ function initAuth() {
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    transition: opacity 0.3s ease;
   `;
   loadingOverlay.innerHTML = `
     <div class="spinner"></div>
@@ -271,37 +376,49 @@ function initAuth() {
   `;
   document.body.appendChild(loadingOverlay);
 
-  // Initialize auth with slight delay to ensure Firebase is ready
-  setTimeout(() => {
-    try {
-      handleAuthState();
-      setupLoginForm();
-      setupRegisterForm();
-      
-      // Remove loading overlay after auth check
-      setTimeout(() => {
-        const overlay = document.getElementById('authLoadingOverlay');
-        if (overlay) {
-          overlay.style.opacity = '0';
-          setTimeout(() => overlay.remove(), 500);
-        }
-      }, 1000);
-      
-      // Expose logout function globally
-      window.logout = logout;
-    } catch (error) {
-      console.error('Initialization error:', error);
-      document.getElementById('authLoadingOverlay')?.remove();
-      Swal.fire({
-        title: 'Initialization Error',
-        text: 'Failed to initialize application. Please refresh the page.',
-        icon: 'error'
-      });
+  // Initialize auth with timeout
+  const initTimeout = setTimeout(() => {
+    if (!authInitialized) {
+      showFatalError('Application initialization timed out. Please refresh.');
     }
-  }, 300);
+  }, 10000);
+
+  try {
+    const unsubscribe = handleAuthState();
+    setupLoginForm();
+    setupRegisterForm();
+    
+    // Cleanup when auth is initialized
+    const checkAuthReady = setInterval(() => {
+      if (authInitialized) {
+        clearTimeout(initTimeout);
+        clearInterval(checkAuthReady);
+        fadeOutAndRemove(loadingOverlay);
+      }
+    }, 100);
+    
+    // Cleanup function for when the page unloads
+    window.addEventListener('beforeunload', () => {
+      unsubscribe?.();
+    });
+
+    // Expose logout function globally
+    window.logout = logout;
+  } catch (error) {
+    console.error('Initialization error:', error);
+    clearTimeout(initTimeout);
+    showFatalError('Failed to initialize application. Please refresh.');
+  }
 }
 
-// Add spin animation to head
+function fadeOutAndRemove(element) {
+  if (element) {
+    element.style.opacity = '0';
+    setTimeout(() => element.remove(), 500);
+  }
+}
+
+// Add spinner styles
 const style = document.createElement('style');
 style.textContent = `
   .spinner {
@@ -320,5 +437,9 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initAuth);
+// Start the application
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAuth);
+} else {
+  initAuth();
+}
