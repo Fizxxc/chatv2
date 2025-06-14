@@ -1,5 +1,4 @@
 // Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBlNHkA1f-1GwBN0nBchMtIwEYUNLlq8FQ",
   authDomain: "e-commerce-a6fe2.firebaseapp.com",
@@ -12,114 +11,202 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Check if user is logged in
-auth.onAuthStateChanged((user) => {
+// Auth State Management
+function handleAuthState() {
+  auth.onAuthStateChanged((user) => {
+    const currentPath = window.location.pathname;
+    
     if (user) {
-        // User is logged in
-        if (window.location.pathname === '/' || window.location.pathname === '/register') {
-            window.location.href = '/chat';
-        }
+      // User is logged in
+      if (currentPath === '/' || currentPath === '/register.html' || currentPath === '/index.html') {
+        setTimeout(() => {
+          window.location.href = '/chat.html';
+        }, 500);
+      }
     } else {
-        // User is not logged in
-        if (window.location.pathname === '/chat') {
-            window.location.href = '/';
-        }
+      // User is not logged in
+      if (currentPath === '/chat.html') {
+        window.location.href = '/index.html';
+      }
     }
-});
+  });
+}
 
-// Login Function
-document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+// Enhanced Login Function
+function setupLoginForm() {
+  const loginForm = document.getElementById('loginForm');
+  if (!loginForm) return;
+
+  loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
-    auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // Signed in
-            const user = userCredential.user;
-            Swal.fire({
-                title: 'Login Successful!',
-                text: 'You are now logged in.',
-                icon: 'success',
-                confirmButtonColor: '#7367f0'
-            }).then(() => {
-                window.location.href = '/chat';
-            });
-        })
-        .catch((error) => {
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            Swal.fire({
-                title: 'Login Failed',
-                text: errorMessage,
-                icon: 'error',
-                confirmButtonColor: '#7367f0'
-            });
-        });
-});
+    try {
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+      
+      await Swal.fire({
+        title: 'Login Successful!',
+        text: 'Redirecting to chat...',
+        icon: 'success',
+        confirmButtonColor: '#7367f0',
+        timer: 1500,
+        showConfirmButton: false
+      });
+      
+      window.location.href = '/chat.html';
+    } catch (error) {
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No user found with this email.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email format.';
+          break;
+      }
+      
+      Swal.fire({
+        title: 'Login Failed',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#7367f0'
+      });
+    }
+  });
+}
 
-// Register Function
-document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+// Enhanced Register Function
+function setupRegisterForm() {
+  const registerForm = document.getElementById('registerForm');
+  if (!registerForm) return;
+
+  registerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const username = document.getElementById('registerUsername').value;
-    const email = document.getElementById('registerEmail').value;
+    const username = document.getElementById('registerUsername').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('registerConfirmPassword').value;
-    
+
+    // Validation
     if (password !== confirmPassword) {
-        Swal.fire({
-            title: 'Password Mismatch',
-            text: 'Passwords do not match.',
-            icon: 'error',
-            confirmButtonColor: '#7367f0'
-        });
-        return;
+      Swal.fire({
+        title: 'Password Mismatch',
+        text: 'Passwords do not match.',
+        icon: 'error',
+        confirmButtonColor: '#7367f0'
+      });
+      return;
     }
-    
-    auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // Signed in
-            const user = userCredential.user;
-            
-            // Save additional user data to database
-            database.ref('users/' + user.uid).set({
-                username: username,
-                email: email,
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            Swal.fire({
-                title: 'Registration Successful!',
-                text: 'Your account has been created.',
-                icon: 'success',
-                confirmButtonColor: '#7367f0'
-            }).then(() => {
-                window.location.href = 'chat.html';
-            });
+
+    if (username.length < 3) {
+      Swal.fire({
+        title: 'Invalid Username',
+        text: 'Username must be at least 3 characters.',
+        icon: 'error',
+        confirmButtonColor: '#7367f0'
+      });
+      return;
+    }
+
+    try {
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      const user = userCredential.user;
+
+      // Save additional user data
+      await database.ref('users/' + user.uid).set({
+        username: username,
+        email: email,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        lastLogin: firebase.database.ServerValue.TIMESTAMP
+      });
+
+      await Swal.fire({
+        title: 'Registration Successful!',
+        text: 'Your account has been created.',
+        icon: 'success',
+        confirmButtonColor: '#7367f0',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      window.location.href = '/chat.html';
+    } catch (error) {
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'Email already in use.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password should be at least 6 characters.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email format.';
+          break;
+      }
+
+      Swal.fire({
+        title: 'Registration Failed',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#7367f0'
+      });
+    }
+  });
+}
+
+// Enhanced Logout Function
+function logout() {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: 'You will be logged out from the system.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#7367f0',
+    cancelButtonColor: '#82868b',
+    confirmButtonText: 'Yes, logout!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      auth.signOut()
+        .then(() => {
+          window.location.href = '/index.html';
         })
         .catch((error) => {
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            Swal.fire({
-                title: 'Registration Failed',
-                text: errorMessage,
-                icon: 'error',
-                confirmButtonColor: '#7367f0'
-            });
+          console.error('Logout error:', error);
+          Swal.fire({
+            title: 'Logout Failed',
+            text: 'An error occurred during logout.',
+            icon: 'error',
+            confirmButtonColor: '#7367f0'
+          });
         });
-});
-
-// Logout Function
-function logout() {
-    auth.signOut().then(() => {
-        window.location.href = '/';
-    }).catch((error) => {
-        console.error('Logout error:', error);
-    });
+    }
+  });
 }
+
+// Initialize all auth functionality
+function initAuth() {
+  handleAuthState();
+  setupLoginForm();
+  setupRegisterForm();
+  
+  // Expose logout function globally if needed
+  window.logout = logout;
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initAuth);
