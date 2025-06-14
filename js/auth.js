@@ -1,22 +1,42 @@
 // Firebase configuration
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+    from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+import { getDatabase, ref, set, onValue, serverTimestamp } 
+    from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-analytics.js";
+
+// Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBlNHkA1f-1GwBN0nBchMtIwEYUNLlq8FQ",
-  authDomain: "e-commerce-a6fe2.firebaseapp.com",
-  databaseURL: "https://e-commerce-a6fe2-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "e-commerce-a6fe2",
-  storageBucket: "e-commerce-a6fe2.firebasestorage.app",
-  messagingSenderId: "169688929056",
-  appId: "1:169688929056:web:8d04f0b02c98fa77d1bd45",
-  measurementId: "G-Q8FP7FQQHV"
+  apiKey: "AIzaSyCTra71Vq4b0nPZ8hdfgY_Sxxr-REk9-9E",
+  authDomain: "https://topup-2c5db-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "topup-2c5db",
+  storageBucket: "topup-2c5db.firebasestorage.app",
+  messagingSenderId: "384342388781",
+  appId: "1:384342388781:web:230ec4dc05ede15d7588a4",
+  measurementId: "G-QJY9J2Y6QZ"
 };
 
-// Initialize Firebase only once
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
-const auth = firebase.auth();
-const database = firebase.database();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const database = getDatabase(app);
+const analytics = getAnalytics(app);
 
+// Improved Auth State Management
+function handleAuthState() {
+    onAuthStateChanged(auth, (user) => {
+        console.log('Auth state changed:', user);
+        currentUser = user;
+        
+        if (!authInitialized) {
+            authInitialized = true;
+            checkRedirect(user);
+        }
+    });
+}
 // Track authentication state
 let authInitialized = false;
 let currentUser = null;
