@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Chat Forum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Sidebar Kontak -->
+        <div class="chat-sidebar">
+            <div class="sidebar-header">
+                <div class="user-profile">
+                    <img src="assets/default-avatar.jpg" alt="Profile" id="userAvatar">
+                    <span id="usernameDisplay"></span>
+                </div>
+                <div class="search-box">
+                    <input type="text" placeholder="Search or start new chat">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div class="chat-list" id="chatList">
+                <!-- Daftar chat akan dimuat di sini -->
+            </div>
+        </div>
+
+        <!-- Area Chat Utama -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-partner-info">
+                    <img src="assets/default-avatar.jpg" alt="Partner" id="partnerAvatar">
+                    <div>
+                        <h3 id="partnerName">Select a chat</h3>
+                        <p id="partnerStatus">Online</p>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button><i class="fas fa-phone"></i></button>
+                    <button><i class="fas fa-video"></i></button>
+                    <button><i class="fas fa-ellipsis-v"></i></button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-chat animate__animated animate__fadeIn">
+                    <i class="fas fa-comments"></i>
+                    <h3>Select a chat to start messaging</h3>
+                    <p>Your messages will appear here</p>
+                </div>
+            </div>
+            <div class="chat-input" id="chatInputArea" style="display: none;">
+                <div class="input-actions">
+                    <button><i class="fas fa-smile"></i></button>
+                    <button><i class="fas fa-paperclip"></i></button>
+                </div>
+                <input type="text" id="messageInput" placeholder="Type a message">
+                <button id="sendMessage"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="fab" id="addFriendFab">
+        <i class="fas fa-user-plus"></i>
+    </div>
+
+    <!-- Modal Add Friend -->
+    <div class="modal" id="addFriendModal">
+        <div class="modal-content animate__animated animate__zoomIn">
+            <span class="close-modal">&times;</span>
+            <h2>Add New Chat</h2>
+            <div class="search-user">
+                <input type="text" id="searchUserInput" placeholder="Search by username or email">
+                <button id="searchUserBtn"><i class="fas fa-search"></i></button>
+            </div>
+            <div class="search-results" id="searchResults">
+                <!-- Hasil pencarian akan muncul di sini -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found | Modern Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Custom 404 Styles */
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            background-color: #f5f5f9;
+        }
+        
+        .error-content {
+            max-width: 600px;
+            padding: 2.5rem;
+            border-radius: 16px;
+            background: var(--white-color);
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .error-graphic {
+            font-size: 8rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            position: relative;
+        }
+        
+        .error-graphic::before {
+            content: "404";
+            position: absolute;
+            font-size: 12rem;
+            opacity: 0.05;
+            top: -2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 700;
+            z-index: 0;
+        }
+        
+        .error-title {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+            position: relative;
+        }
+        
+        .error-message {
+            font-size: 1rem;
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            position: relative;
+        }
+        
+        .error-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(115, 103, 240, 0.3);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background-color: rgba(115, 103, 240, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .floating-elements {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .floating-element {
+            position: absolute;
+            background-color: rgba(115, 103, 240, 0.1);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+        
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+            }
+            100% {
+                transform: translateY(-1000px) rotate(720deg);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .error-graphic {
+                font-size: 6rem;
+            }
+            
+            .error-graphic::before {
+                font-size: 8rem;
+                top: -1rem;
+            }
+            
+            .error-title {
+                font-size: 1.5rem;
+            }
+            
+            .error-content {
+                padding: 2rem 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .error-actions {
+                flex-direction: column;
+                gap: 0.8rem;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-content animate__animated animate__fadeInUp">
+            <!-- Floating background elements -->
+            <div class="floating-elements">
+                <div class="floating-element" style="width: 100px; height: 100px; top: 10%; left: 10%; animation-delay: 0s;"></div>
+                <div class="floating-element" style="width: 150px; height: 150px; top: 60%; left: 70%; animation-delay: 2s; animation-duration: 20s;"></div>
+                <div class="floating-element" style="width: 80px; height: 80px; top: 80%; left: 30%; animation-delay: 4s; animation-duration: 18s;"></div>
+                <div class="floating-element" style="width: 120px; height: 120px; top: 30%; left: 50%; animation-delay: 6s;"></div>
+            </div>
+            
+            <div class="error-graphic">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1 class="error-title">Oops! Page Not Found</h1>
+            <p class="error-message">
+                The page you are looking for might have been removed, had its name changed, 
+                or is temporarily unavailable. Let's get you back on track.
+            </p>
+            <div class="error-actions">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Go to Homepage
+                </a>
+                <a href="javascript:history.back()" class="btn btn-outline">
+                    <i class="fas fa-arrow-left"></i> Go Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Font Awesome for icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+    
+    <!-- SweetAlert2 for potential error messages -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script>
+        // Add animation to elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Generate more floating elements dynamically
+            const floatingContainer = document.querySelector('.floating-elements');
+            for (let i = 0; i < 8; i++) {
+                const size = Math.random() * 60 + 40;
+                const posX = Math.random() * 100;
+                const posY = Math.random() * 100;
+                const delay = Math.random() * 8;
+                const duration = Math.random() * 10 + 10;
+                
+                const element = document.createElement('div');
+                element.className = 'floating-element';
+                element.style.cssText = `
+                    width: ${size}px;
+                    height: ${size}px;
+                    top: ${posY}%;
+                    left: ${posX}%;
+                    animation-delay: ${delay}s;
+                    animation-duration: ${duration}s;
+                    opacity: ${Math.random() * 0.3 + 0.1};
+                `;
+                
+                floatingContainer.appendChild(element);
+            }
+            
+            // Check if coming from broken link
+            if (window.location.search.includes('redirected=true')) {
+                Swal.fire({
+                    title: 'Redirected to 404',
+                    text: 'The page you requested was not found.',
+                    icon: 'error',
+                    confirmButtonColor: '#7367f0'
+                });
+            }
+        });
+    </script>
+</body>
+</html>
