@@ -19,6 +19,10 @@
                 <div class="user-profile">
                     <img src="assets/default-avatar.jpg" alt="Profile" id="userAvatar">
                     <span id="usernameDisplay"></span>
+                    <button class="logout-btn" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </button>
                 </div>
                 <div class="search-box">
                     <input type="text" placeholder="Search or start new chat">
@@ -43,7 +47,7 @@
                 <div class="chat-actions">
                     <button><i class="fas fa-phone"></i></button>
                     <button><i class="fas fa-video"></i></button>
-                    <button><i class="fas fa-ellipsis-v"></i></button>
+                    <button id="chatSettingsBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
             <div class="chat-messages" id="chatMessages">
